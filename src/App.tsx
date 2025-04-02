@@ -7,6 +7,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Team from "./pages/Team";
+import Projects from "./pages/Projects";
+import Documents from "./pages/Documents";
+import Messages from "./pages/Messages";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 // Create the client as a function component to properly use React context
@@ -23,6 +27,10 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/team" element={<Team />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/reports" element={<Reports />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
