@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
@@ -22,7 +23,7 @@ type FormValues = z.infer<typeof formSchema>;
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, supabaseError } = useAuth();
   const navigate = useNavigate();
 
   const form = useForm<FormValues>({
@@ -64,10 +65,23 @@ const Auth = () => {
             Enter your email and password to {activeTab === 'login' ? 'sign in' : 'create an account'}
           </CardDescription>
         </CardHeader>
+
+        {supabaseError && (
+          <CardContent>
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Configuration Error</AlertTitle>
+              <AlertDescription>
+                {supabaseError}
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        )}
+
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'register')}>
           <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
+            <TabsTrigger value="login" disabled={!!supabaseError}>Login</TabsTrigger>
+            <TabsTrigger value="register" disabled={!!supabaseError}>Register</TabsTrigger>
           </TabsList>
           <TabsContent value="login">
             <Form {...form}>
@@ -80,7 +94,7 @@ const Auth = () => {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input placeholder="email@example.com" {...field} />
+                          <Input placeholder="email@example.com" {...field} disabled={!!supabaseError} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -93,7 +107,7 @@ const Auth = () => {
                       <FormItem>
                         <FormLabel>Password</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} />
+                          <Input type="password" placeholder="••••••••" {...field} disabled={!!supabaseError} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -101,7 +115,7 @@ const Auth = () => {
                   />
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full" disabled={isLoading || !!supabaseError}>
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -126,7 +140,7 @@ const Auth = () => {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input placeholder="email@example.com" {...field} />
+                          <Input placeholder="email@example.com" {...field} disabled={!!supabaseError} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -139,7 +153,7 @@ const Auth = () => {
                       <FormItem>
                         <FormLabel>Password</FormLabel>
                         <FormControl>
-                          <Input type="password" placeholder="••••••••" {...field} />
+                          <Input type="password" placeholder="••••••••" {...field} disabled={!!supabaseError} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -147,7 +161,7 @@ const Auth = () => {
                   />
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
+                  <Button type="submit" className="w-full" disabled={isLoading || !!supabaseError}>
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
