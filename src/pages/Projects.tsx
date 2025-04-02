@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, Filter, Calendar } from 'lucide-react';
 import { ProjectCard } from '@/components/ProjectCard';
+import { Project, projects as mockProjects } from '@/data/mockData';
+import { toast } from 'sonner';
 
-interface Project {
+// Interface to handle the projects data structure internally within this component
+interface ProjectState {
   id: string;
   title: string;
   description: string;
@@ -18,67 +21,38 @@ interface Project {
   members: string[];
 }
 
-const initialProjects: Project[] = [
-  {
-    id: '1',
-    title: 'Website Redesign',
-    description: 'Complete overhaul of company website with modern UI/UX',
-    status: 'in-progress',
-    dueDate: '2023-08-15',
-    progress: 65,
-    members: ['Alex Johnson', 'Sarah Miller']
-  },
-  {
-    id: '2',
-    title: 'Mobile App Development',
-    description: 'Create native iOS and Android apps for our service',
-    status: 'planning',
-    dueDate: '2023-09-30',
-    progress: 20,
-    members: ['John Doe', 'Emma Wilson']
-  },
-  {
-    id: '3',
-    title: 'Marketing Campaign',
-    description: 'Q3 digital marketing campaign across social platforms',
-    status: 'completed',
-    dueDate: '2023-07-10',
-    progress: 100,
-    members: ['Sarah Miller', 'Alex Johnson']
-  },
-  {
-    id: '4',
-    title: 'Database Migration',
-    description: 'Migrate from legacy system to new cloud database',
-    status: 'on-hold',
-    dueDate: '2023-10-05',
-    progress: 35,
-    members: ['John Doe']
-  },
-  {
-    id: '5',
-    title: 'Client Portal',
-    description: 'Self-service portal for client account management',
-    status: 'planning',
-    dueDate: '2023-11-20',
-    progress: 15,
-    members: ['Emma Wilson', 'Alex Johnson']
-  },
-  {
-    id: '6',
-    title: 'Security Audit',
-    description: 'Comprehensive security review of all systems',
-    status: 'in-progress',
-    dueDate: '2023-08-30',
-    progress: 50,
-    members: ['John Doe', 'Sarah Miller']
-  }
-];
+// Helper function to convert between the two Project types
+const mapToProjectState = (project: Project): ProjectState => {
+  return {
+    id: project.id,
+    title: project.name,
+    description: project.description,
+    status: project.progress < 25 ? 'planning' : project.progress < 75 ? 'in-progress' : project.progress === 100 ? 'completed' : 'on-hold',
+    dueDate: project.dueDate,
+    progress: project.progress,
+    members: project.teamMembers.map(id => id)
+  };
+};
+
+// Helper function to convert back to the mockData Project type
+const mapToMockProject = (project: ProjectState): Project => {
+  return {
+    id: project.id,
+    name: project.title,
+    description: project.description,
+    progress: project.progress,
+    dueDate: project.dueDate,
+    teamMembers: project.members,
+    documentsCount: 0 // Default value
+  };
+};
 
 const Projects = () => {
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  // Initialize with mapped mock projects
+  const initialProjectsState = mockProjects.map(mapToProjectState);
+  const [projects, setProjects] = useState<ProjectState[]>(initialProjectsState);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>(projects);
+  const [filteredProjects, setFilteredProjects] = useState<ProjectState[]>(projects);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const term = e.target.value;
@@ -93,7 +67,7 @@ const Projects = () => {
   };
 
   const createNewProject = () => {
-    const newProject: Project = {
+    const newProject: ProjectState = {
       id: Date.now().toString(),
       title: 'New Project',
       description: 'Project description',
@@ -112,6 +86,22 @@ const Projects = () => {
       ) : 
       updatedProjects
     );
+    
+    toast.success('New project created successfully!');
+  };
+
+  const deleteProject = (id: string) => {
+    const updatedProjects = projects.filter(project => project.id !== id);
+    setProjects(updatedProjects);
+    setFilteredProjects(searchTerm ? 
+      updatedProjects.filter(project => 
+        project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        project.description.toLowerCase().includes(searchTerm.toLowerCase())
+      ) : 
+      updatedProjects
+    );
+    
+    toast.success('Project deleted successfully!');
   };
 
   return (
@@ -157,7 +147,11 @@ const Projects = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {(searchTerm ? filteredProjects : projects).map((project) => (
-              <ProjectCard key={project.id} project={project} />
+              <ProjectCard 
+                key={project.id} 
+                project={mapToMockProject(project)}
+                onDelete={() => deleteProject(project.id)}
+              />
             ))}
           </div>
         </div>
