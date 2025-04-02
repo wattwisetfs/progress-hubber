@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   BarChart, 
   FileText, 
@@ -41,6 +41,8 @@ const SidebarLink = ({ icon: Icon, label, href, active }: SidebarLinkProps) => {
 
 export const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const location = useLocation();
+  const currentPath = location.pathname;
 
   return (
     <div className={cn(
@@ -74,16 +76,16 @@ export const Sidebar = () => {
       </div>
 
       <div className="flex-1 px-3 py-2 space-y-1">
-        <SidebarLink icon={Home} label="Dashboard" href="/" active />
-        <SidebarLink icon={LayoutGrid} label="Projects" href="/projects" />
-        <SidebarLink icon={FileText} label="Documents" href="/documents" />
-        <SidebarLink icon={MessageSquare} label="Messages" href="/messages" />
-        <SidebarLink icon={Users} label="Team" href="/team" />
-        <SidebarLink icon={BarChart} label="Reports" href="/reports" />
+        <SidebarLink icon={Home} label="Dashboard" href="/" active={currentPath === "/"} />
+        <SidebarLink icon={LayoutGrid} label="Projects" href="/projects" active={currentPath === "/projects"} />
+        <SidebarLink icon={FileText} label="Documents" href="/documents" active={currentPath === "/documents"} />
+        <SidebarLink icon={MessageSquare} label="Messages" href="/messages" active={currentPath === "/messages"} />
+        <SidebarLink icon={Users} label="Team" href="/team" active={currentPath === "/team"} />
+        <SidebarLink icon={BarChart} label="Reports" href="/reports" active={currentPath === "/reports"} />
       </div>
 
       <div className="px-3 py-2 mt-auto border-t border-sidebar-border">
-        <SidebarLink icon={Settings} label="Settings" href="/settings" />
+        <SidebarLink icon={Settings} label="Settings" href="/settings" active={currentPath === "/settings"} />
       </div>
     </div>
   );
