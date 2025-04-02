@@ -2,7 +2,7 @@
 import { File, FileImage, FileSpreadsheet, FileText, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, isValid } from 'date-fns';
 import { type Document, getUserById, getProjectById } from '@/data/mockData';
 import { cn } from '@/lib/utils';
 
@@ -31,6 +31,12 @@ export const DocumentItem = ({ document }: DocumentItemProps) => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
+    
+    // Check if the date is valid before formatting
+    if (!isValid(date)) {
+      return 'Invalid date';
+    }
+    
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
     

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
@@ -6,11 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Search, Filter, FileText, MoreVertical, Folder } from 'lucide-react';
+import { Plus, Search, Filter, FileText } from 'lucide-react';
 import { DocumentItem } from '@/components/DocumentItem';
-import { Badge } from '@/components/ui/badge';
+import { documents as mockDocuments } from '@/data/mockData';
 
-interface Document {
+interface LocalDocument {
   id: string;
   title: string;
   type: string;
@@ -21,7 +20,17 @@ interface Document {
   tags: string[];
 }
 
-const initialDocuments: Document[] = [
+interface AppDocument {
+  id: string;
+  title: string;
+  type: 'doc' | 'sheet' | 'image' | 'pdf';
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  projectId: string;
+}
+
+const initialDocuments: LocalDocument[] = [
   {
     id: '1',
     title: 'Project Requirements.docx',
@@ -95,7 +104,7 @@ const initialDocuments: Document[] = [
 ];
 
 const Documents = () => {
-  const [documents, setDocuments] = useState<Document[]>(initialDocuments);
+  const [documents, setDocuments] = useState<LocalDocument[]>(initialDocuments);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentCategory, setCurrentCategory] = useState('All');
   
@@ -111,9 +120,32 @@ const Documents = () => {
     return matchesSearch && matchesCategory;
   });
 
+  const mapToAppDocument = (doc: LocalDocument): AppDocument => {
+    let docType: 'doc' | 'sheet' | 'image' | 'pdf' = 'doc';
+    
+    if (doc.type.includes('doc')) {
+      docType = 'doc';
+    } else if (doc.type.includes('xls')) {
+      docType = 'sheet';
+    } else if (['jpg', 'png', 'gif', 'svg', 'fig'].some(ext => doc.type.includes(ext))) {
+      docType = 'image';
+    } else if (doc.type.includes('pdf')) {
+      docType = 'pdf';
+    }
+
+    return {
+      id: doc.id,
+      title: doc.title,
+      type: docType,
+      createdAt: new Date().toISOString(),
+      updatedAt: doc.lastModified || new Date().toISOString(),
+      createdBy: 'user1',
+      projectId: 'project1'
+    };
+  };
+
   const uploadDocument = () => {
-    // In a real application, this would open a file picker
-    const newDocument: Document = {
+    const newDocument: LocalDocument = {
       id: Date.now().toString(),
       title: 'New Document.pdf',
       type: 'pdf',
@@ -191,7 +223,7 @@ const Documents = () => {
             <CardContent className="p-0">
               {filteredDocuments.length > 0 ? (
                 <div className="divide-y">
-                  {filteredDocuments.map((doc) => (
+                  {mockDocuments.map((doc) => (
                     <DocumentItem key={doc.id} document={doc} />
                   ))}
                 </div>
