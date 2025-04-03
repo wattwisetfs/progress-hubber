@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -34,9 +33,8 @@ import {
   Upload,
   File as FileIcon,
   FileImage,
-  FilePdf,
-  FileSpreadsheet,
   FileText as FileTextIcon,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -66,7 +64,7 @@ const Documents = () => {
       id: '2',
       name: 'Requirements Specification.pdf',
       type: 'pdf',
-      icon: <FilePdf className="h-6 w-6 text-red-500" />,
+      icon: <File className="h-6 w-6 text-red-500" />,
       size: '3.5 MB',
       modified: 'Yesterday',
       shared: true,
