@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -45,10 +44,10 @@ const Messages = () => {
   const contacts = [
     { id: '1', name: 'Alex Johnson', status: 'online', avatar: '', unread: 3, lastMessage: 'Can you review the latest designs?', lastActive: '10:32 AM' },
     { id: '2', name: 'Sarah Miller', status: 'offline', avatar: '', unread: 0, lastMessage: 'The meeting is scheduled for tomorrow', lastActive: 'Yesterday' },
-    { id: '3', name: 'Development Team', status: 'group', avatar: '', unread: 5, lastMessage: 'David: I\'ve pushed the latest changes', lastActive: 'Yesterday' },
+    { id: '3', name: 'Development Team', status: 'group', avatar: '', unread: 5, lastMessage: "David: I've pushed the latest changes", lastActive: 'Yesterday' },
     { id: '4', name: 'Emily Chen', status: 'online', avatar: '', unread: 0, lastMessage: 'Sounds good!', lastActive: '2 days ago' },
-    { id: '5', name: 'David Lee', status: 'away', avatar: '', unread: 0, lastMessage: 'I\'ll check and get back to you', lastActive: '3 days ago' },
-    { id: '6', name: 'Marketing Team', status: 'group', avatar: '', unread: 0, lastMessage: 'Sarah: Let\'s discuss the campaign next week', lastActive: 'Last week' },
+    { id: '5', name: 'David Lee', status: 'away', avatar: '', unread: 0, lastMessage: "I'll check and get back to you", lastActive: '3 days ago' },
+    { id: '6', name: 'Marketing Team', status: 'group', avatar: '', unread: 0, lastMessage: "Sarah: Let's discuss the campaign next week", lastActive: 'Last week' },
   ];
   
   const getStatusColor = (status: string) => {
@@ -67,13 +66,13 @@ const Messages = () => {
   };
 
   const messageHistory = [
-    { id: 1, sender: 'other', content: 'Hi there! How's the project coming along?', time: '10:12 AM' },
+    { id: 1, sender: 'other', content: "Hi there! How's the project coming along?", time: '10:12 AM' },
     { id: 2, sender: 'me', content: 'Hey! Going well. Just finalizing the design mockups.', time: '10:15 AM' },
     { id: 3, sender: 'other', content: 'Great! When do you think you can share them with the team?', time: '10:17 AM' },
     { id: 4, sender: 'me', content: 'I should have them ready by EOD. There are a few minor adjustments I want to make first.', time: '10:20 AM' },
     { id: 5, sender: 'other', content: 'Perfect. The client is eager to see progress, so that timing works well.', time: '10:22 AM' },
-    { id: 6, sender: 'other', content: 'Also, can you review the latest requirements doc? I've made some updates based on our last client call.', time: '10:23 AM' },
-    { id: 7, sender: 'me', content: 'Sure, I'll take a look right after lunch.', time: '10:25 AM' },
+    { id: 6, sender: 'other', content: "Also, can you review the latest requirements doc? I've made some updates based on our last client call.", time: '10:23 AM' },
+    { id: 7, sender: 'me', content: "Sure, I'll take a look right after lunch.", time: '10:25 AM' },
     { id: 8, sender: 'other', content: 'Thanks! Appreciate it.', time: '10:26 AM' },
     { id: 9, sender: 'me', content: 'No problem. By the way, should we schedule a team check-in before the client demo?', time: '10:30 AM' },
     { id: 10, sender: 'other', content: 'Definitely. How about tomorrow morning? Around 9:30?', time: '10:32 AM' },
