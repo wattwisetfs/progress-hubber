@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,8 +27,12 @@ import { Copy, Mail, MoreHorizontal, Plus, UserPlus, Users } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Team = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [inviteLink, setInviteLink] = useState('https://progresshub.app/invite/team123');
   const [teamMembers, setTeamMembers] = useState<Array<{ id: number; name: string; role: string; email: string; avatar: string; }>>([]);
@@ -37,8 +40,56 @@ const Team = () => {
   const [newInviteEmail, setNewInviteEmail] = useState('');
   const [newInviteRole, setNewInviteRole] = useState('');
   const [newInviteMessage, setNewInviteMessage] = useState('');
-  const { toast } = useToast();
-  
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchPendingInvitations();
+  }, [user]);
+
+  const fetchPendingInvitations = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('team_invitations')
+      .select('*')
+      .eq('email', user.email)
+      .eq('status', 'pending');
+
+    if (error) {
+      console.error('Error fetching invitations:', error);
+      return;
+    }
+
+    setPendingInvitations(data || []);
+  };
+
+  const handleAcceptInvitation = async (invitationId: string) => {
+    const { error } = await supabase
+      .from('team_invitations')
+      .update({ 
+        status: 'accepted', 
+        invited_user_id: user?.id,
+        updated_at: new Date().toISOString() 
+      })
+      .eq('id', invitationId);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Could not accept invitation",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    toast({
+      title: "Invitation Accepted",
+      description: "You have joined the team!"
+    });
+
+    fetchPendingInvitations();
+  };
+
   const copyInviteLink = () => {
     navigator.clipboard.writeText(inviteLink);
     toast({
@@ -47,44 +98,41 @@ const Team = () => {
     });
   };
 
-  const handleSendInvitation = () => {
-    if (!newInviteEmail) {
+  const handleSendInvitation = async () => {
+    if (!newInviteEmail || !newInviteRole) {
       toast({
-        title: "Email required",
-        description: "Please enter an email address for the invitation.",
+        title: "Missing Information",
+        description: "Please provide an email and role",
         variant: "destructive"
       });
       return;
     }
 
-    if (!newInviteRole) {
+    const { error } = await supabase
+      .from('team_invitations')
+      .insert({
+        email: newInviteEmail,
+        inviter_id: user?.id,
+        role: newInviteRole,
+        status: 'pending'
+      });
+
+    if (error) {
       toast({
-        title: "Role required",
-        description: "Please select a role for the new team member.",
+        title: "Error",
+        description: "Could not send invitation",
         variant: "destructive"
       });
       return;
     }
 
-    // Add to pending invites
-    const newInvite = {
-      id: Date.now(),
-      email: newInviteEmail,
-      role: newInviteRole,
-      sent: 'Just now'
-    };
+    toast({
+      title: "Invitation Sent",
+      description: `Invitation sent to ${newInviteEmail}`
+    });
 
-    setPendingInvites([...pendingInvites, newInvite]);
-    
-    // Reset form
     setNewInviteEmail('');
     setNewInviteRole('');
-    setNewInviteMessage('');
-    
-    toast({
-      title: "Invitation sent!",
-      description: `Invitation email has been sent to ${newInviteEmail}`,
-    });
   };
 
   const handleCancelInvite = (id: number) => {
@@ -486,6 +534,52 @@ const Team = () => {
                     <h3 className="text-xl font-semibold">No Groups Created</h3>
                     <p className="text-muted-foreground max-w-md mx-auto mt-2 mb-6">
                       Groups help you organize your team members for different projects and responsibilities. Add team members first before creating groups.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        
+          {/* Pending Invitations Tab */}
+          <TabsContent value="pending">
+            <Card>
+              <CardHeader>
+                <CardTitle>Pending Invitations</CardTitle>
+                <CardDescription>
+                  Team invitations waiting for your response
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {pendingInvitations.length > 0 ? (
+                  <div className="space-y-4">
+                    {pendingInvitations.map((invitation) => (
+                      <div 
+                        key={invitation.id} 
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium">Invitation from {invitation.inviter_id}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Role: {invitation.role}
+                          </p>
+                        </div>
+                        <Button 
+                          onClick={() => handleAcceptInvitation(invitation.id)}
+                        >
+                          Accept Invitation
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="rounded-full bg-muted p-6 mb-4">
+                      <Mail className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-xl font-semibold">No Pending Invitations</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto mt-2">
+                      You currently have no team invitations waiting for your response.
                     </p>
                   </div>
                 )}
