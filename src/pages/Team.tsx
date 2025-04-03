@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
@@ -26,9 +27,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Copy, Mail, MoreHorizontal, Plus, UserPlus, Users } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Database } from '@/integrations/supabase/types';
+
+type TeamInvitation = Database['public']['Tables']['team_invitations']['Row'];
 
 const Team = () => {
   const { user } = useAuth();
@@ -40,7 +44,7 @@ const Team = () => {
   const [newInviteEmail, setNewInviteEmail] = useState('');
   const [newInviteRole, setNewInviteRole] = useState('');
   const [newInviteMessage, setNewInviteMessage] = useState('');
-  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<TeamInvitation[]>([]);
 
   useEffect(() => {
     fetchPendingInvitations();
@@ -76,7 +80,7 @@ const Team = () => {
     if (error) {
       toast({
         title: "Error",
-        description: "Could not accept invitation",
+        description: "Could not accept invitation: " + error.message,
         variant: "destructive"
       });
       return;
@@ -99,6 +103,15 @@ const Team = () => {
   };
 
   const handleSendInvitation = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "You need to be logged in to send invitations",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!newInviteEmail || !newInviteRole) {
       toast({
         title: "Missing Information",
@@ -112,15 +125,16 @@ const Team = () => {
       .from('team_invitations')
       .insert({
         email: newInviteEmail,
-        inviter_id: user?.id,
+        inviter_id: user.id,
         role: newInviteRole,
         status: 'pending'
       });
 
     if (error) {
+      console.error('Error sending invitation:', error);
       toast({
         title: "Error",
-        description: "Could not send invitation",
+        description: "Could not send invitation: " + error.message,
         variant: "destructive"
       });
       return;
@@ -133,6 +147,7 @@ const Team = () => {
 
     setNewInviteEmail('');
     setNewInviteRole('');
+    setNewInviteMessage('');
   };
 
   const handleCancelInvite = (id: number) => {
@@ -291,6 +306,7 @@ const Team = () => {
           <TabsList>
             <TabsTrigger value="members">Members</TabsTrigger>
             <TabsTrigger value="pending">Pending Invites</TabsTrigger>
+            <TabsTrigger value="invitations">Invitations for You</TabsTrigger>
             <TabsTrigger value="groups">Groups</TabsTrigger>
           </TabsList>
           
@@ -507,45 +523,10 @@ const Team = () => {
             </Card>
           </TabsContent>
           
-          <TabsContent value="groups">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div>
-                  <CardTitle>Team Groups</CardTitle>
-                  <CardDescription>
-                    Create and manage groups for better team organization.
-                  </CardDescription>
-                </div>
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Group
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {teamMembers.length > 0 ? (
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {/* Group cards would go here */}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="rounded-full bg-muted p-6 mb-4">
-                      <Users className="h-10 w-10 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-xl font-semibold">No Groups Created</h3>
-                    <p className="text-muted-foreground max-w-md mx-auto mt-2 mb-6">
-                      Groups help you organize your team members for different projects and responsibilities. Add team members first before creating groups.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        
-          {/* Pending Invitations Tab */}
-          <TabsContent value="pending">
+          <TabsContent value="invitations">
             <Card>
               <CardHeader>
-                <CardTitle>Pending Invitations</CardTitle>
+                <CardTitle>Invitations for You</CardTitle>
                 <CardDescription>
                   Team invitations waiting for your response
                 </CardDescription>
@@ -580,6 +561,40 @@ const Team = () => {
                     <h3 className="text-xl font-semibold">No Pending Invitations</h3>
                     <p className="text-muted-foreground max-w-md mx-auto mt-2">
                       You currently have no team invitations waiting for your response.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="groups">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle>Team Groups</CardTitle>
+                  <CardDescription>
+                    Create and manage groups for better team organization.
+                  </CardDescription>
+                </div>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Group
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {teamMembers.length > 0 ? (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {/* Group cards would go here */}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="rounded-full bg-muted p-6 mb-4">
+                      <Users className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-xl font-semibold">No Groups Created</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto mt-2 mb-6">
+                      Groups help you organize your team members for different projects and responsibilities. Add team members first before creating groups.
                     </p>
                   </div>
                 )}
