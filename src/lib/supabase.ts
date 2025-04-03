@@ -1,29 +1,15 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// These environment variables should be set in your Lovable project's environment settings
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Use hardcoded values from your Supabase project
+const supabaseUrl = "https://jkgvjfxiyaqqbniasppz.supabase.co";
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImprZ3ZqZnhpeWFxcWJuaWFzcHB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MDA2MjQsImV4cCI6MjA1OTE3NjYyNH0.adxmGOHysvDyQ9hxYVqPIZySHuIviue7E9Ud_h38PdY";
 
-// Check if Supabase environment variables are set
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your Lovable project settings.');
-}
-
-// Create the Supabase client if credentials are available
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+// Create the Supabase client
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Helper functions for auth with proper error handling
 export const signUp = async (email: string, password: string) => {
-  if (!supabase) {
-    return { 
-      data: null, 
-      error: new Error('Supabase client not initialized. Please set the required environment variables.') 
-    };
-  }
-  
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -40,13 +26,6 @@ export const signUp = async (email: string, password: string) => {
 };
 
 export const signIn = async (email: string, password: string) => {
-  if (!supabase) {
-    return { 
-      data: null, 
-      error: new Error('Supabase client not initialized. Please set the required environment variables.') 
-    };
-  }
-  
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -63,10 +42,6 @@ export const signIn = async (email: string, password: string) => {
 };
 
 export const signOut = async () => {
-  if (!supabase) {
-    return { error: new Error('Supabase client not initialized. Please set the required environment variables.') };
-  }
-  
   try {
     const { error } = await supabase.auth.signOut();
     return { error };
@@ -79,13 +54,6 @@ export const signOut = async () => {
 };
 
 export const getCurrentUser = async () => {
-  if (!supabase) {
-    return { 
-      user: null, 
-      error: new Error('Supabase client not initialized. Please set the required environment variables.') 
-    };
-  }
-  
   try {
     const { data, error } = await supabase.auth.getUser();
     return { user: data?.user || null, error };
