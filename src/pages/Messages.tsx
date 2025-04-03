@@ -1,413 +1,323 @@
 
-import { useState } from 'react';
-import { Sidebar } from '@/components/Sidebar';
-import { Header } from '@/components/Header';
-import { Card, CardContent } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, Plus, Send, UserPlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-
-interface Conversation {
-  id: string;
-  person: {
-    name: string;
-    avatar?: string;
-    isOnline: boolean;
-  };
-  lastMessage: {
-    text: string;
-    timestamp: string;
-    isRead: boolean;
-    sender: string;
-  };
-  messages: Message[];
-}
-
-interface Message {
-  id: string;
-  text: string;
-  timestamp: string;
-  sender: string;
-  isRead: boolean;
-}
-
-const initialConversations: Conversation[] = [
-  {
-    id: '1',
-    person: {
-      name: 'Alex Johnson',
-      avatar: undefined,
-      isOnline: true,
-    },
-    lastMessage: {
-      text: 'Sure, I can help with that. Let me know when you want to discuss.',
-      timestamp: '09:42 AM',
-      isRead: false,
-      sender: 'Alex Johnson',
-    },
-    messages: [
-      {
-        id: '101',
-        text: 'Hey, can you help me with the project requirements?',
-        timestamp: '09:40 AM',
-        sender: 'me',
-        isRead: true,
-      },
-      {
-        id: '102',
-        text: 'Sure, I can help with that. Let me know when you want to discuss.',
-        timestamp: '09:42 AM',
-        sender: 'Alex Johnson',
-        isRead: false,
-      },
-    ],
-  },
-  {
-    id: '2',
-    person: {
-      name: 'Sarah Miller',
-      avatar: undefined,
-      isOnline: true,
-    },
-    lastMessage: {
-      text: 'The marketing strategy is ready for review.',
-      timestamp: 'Yesterday',
-      isRead: true,
-      sender: 'Sarah Miller',
-    },
-    messages: [
-      {
-        id: '201',
-        text: 'Hi Sarah, how is the marketing strategy coming along?',
-        timestamp: 'Yesterday',
-        sender: 'me',
-        isRead: true,
-      },
-      {
-        id: '202',
-        text: 'The marketing strategy is ready for review.',
-        timestamp: 'Yesterday',
-        sender: 'Sarah Miller',
-        isRead: true,
-      },
-    ],
-  },
-  {
-    id: '3',
-    person: {
-      name: 'John Doe',
-      avatar: undefined,
-      isOnline: false,
-    },
-    lastMessage: {
-      text: 'I finished the API documentation, check it out when you have time.',
-      timestamp: 'Jul 25',
-      isRead: true,
-      sender: 'John Doe',
-    },
-    messages: [
-      {
-        id: '301',
-        text: 'How is the API documentation going?',
-        timestamp: 'Jul 25',
-        sender: 'me',
-        isRead: true,
-      },
-      {
-        id: '302',
-        text: 'I finished the API documentation, check it out when you have time.',
-        timestamp: 'Jul 25',
-        sender: 'John Doe',
-        isRead: true,
-      },
-    ],
-  },
-  {
-    id: '4',
-    person: {
-      name: 'Emma Wilson',
-      avatar: undefined,
-      isOnline: false,
-    },
-    lastMessage: {
-      text: 'The wireframes are ready for the client meeting tomorrow.',
-      timestamp: 'Jul 23',
-      isRead: true,
-      sender: 'Emma Wilson',
-    },
-    messages: [
-      {
-        id: '401',
-        text: 'When will the wireframes be ready?',
-        timestamp: 'Jul 23',
-        sender: 'me',
-        isRead: true,
-      },
-      {
-        id: '402',
-        text: 'The wireframes are ready for the client meeting tomorrow.',
-        timestamp: 'Jul 23',
-        sender: 'Emma Wilson',
-        isRead: true,
-      },
-    ],
-  },
-];
+import { Textarea } from '@/components/ui/textarea';
+import { 
+  ChevronDown, 
+  Edit, 
+  Info, 
+  MessageSquarePlus, 
+  MoreHorizontal, 
+  Paperclip,
+  Phone,
+  Plus,
+  Search,
+  Send,
+  Settings,
+  VideoIcon,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 const Messages = () => {
-  const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [newMessage, setNewMessage] = useState('');
-  const { toast } = useToast();
-
-  const filteredConversations = conversations.filter((conv) =>
-    conv.person.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleSelectConversation = (conversation: Conversation) => {
-    // Mark all messages as read when conversation is selected
-    const updatedConversations = conversations.map((conv) => {
-      if (conv.id === conversation.id) {
-        const updatedMessages = conv.messages.map((msg) => ({
-          ...msg,
-          isRead: true,
-        }));
-        
-        return {
-          ...conv,
-          messages: updatedMessages,
-          lastMessage: {
-            ...conv.lastMessage,
-            isRead: true,
-          },
-        };
-      }
-      return conv;
-    });
-    
-    setConversations(updatedConversations);
-    setSelectedConversation(updatedConversations.find((c) => c.id === conversation.id) || null);
+  const [activeChat, setActiveChat] = useState('1');
+  
+  const contacts = [
+    { id: '1', name: 'Alex Johnson', status: 'online', avatar: '', unread: 3, lastMessage: 'Can you review the latest designs?', lastActive: '10:32 AM' },
+    { id: '2', name: 'Sarah Miller', status: 'offline', avatar: '', unread: 0, lastMessage: 'The meeting is scheduled for tomorrow', lastActive: 'Yesterday' },
+    { id: '3', name: 'Development Team', status: 'group', avatar: '', unread: 5, lastMessage: 'David: I\'ve pushed the latest changes', lastActive: 'Yesterday' },
+    { id: '4', name: 'Emily Chen', status: 'online', avatar: '', unread: 0, lastMessage: 'Sounds good!', lastActive: '2 days ago' },
+    { id: '5', name: 'David Lee', status: 'away', avatar: '', unread: 0, lastMessage: 'I\'ll check and get back to you', lastActive: '3 days ago' },
+    { id: '6', name: 'Marketing Team', status: 'group', avatar: '', unread: 0, lastMessage: 'Sarah: Let\'s discuss the campaign next week', lastActive: 'Last week' },
+  ];
+  
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'online':
+        return 'bg-green-500';
+      case 'away':
+        return 'bg-yellow-500';
+      case 'offline':
+        return 'bg-gray-500';
+      case 'group':
+        return 'bg-blue-500';
+      default:
+        return 'bg-gray-500';
+    }
   };
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim() || !selectedConversation) return;
-    
-    const newMessageObj: Message = {
-      id: Date.now().toString(),
-      text: newMessage,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      sender: 'me',
-      isRead: false,
-    };
-    
-    const updatedConversations = conversations.map((conv) => {
-      if (conv.id === selectedConversation.id) {
-        return {
-          ...conv,
-          messages: [...conv.messages, newMessageObj],
-          lastMessage: {
-            text: newMessage,
-            timestamp: newMessageObj.timestamp,
-            isRead: false,
-            sender: 'me',
-          },
-        };
-      }
-      return conv;
-    });
-    
-    setConversations(updatedConversations);
-    setSelectedConversation(updatedConversations.find((c) => c.id === selectedConversation.id) || null);
-    setNewMessage('');
-    
-    toast({
-      title: "Message sent",
-      description: "Your message was sent successfully.",
-    });
-  };
-
-  const startNewConversation = () => {
-    toast({
-      title: "Start a new conversation",
-      description: "This feature is not implemented in this demo.",
-    });
-  };
+  const messageHistory = [
+    { id: 1, sender: 'other', content: 'Hi there! How's the project coming along?', time: '10:12 AM' },
+    { id: 2, sender: 'me', content: 'Hey! Going well. Just finalizing the design mockups.', time: '10:15 AM' },
+    { id: 3, sender: 'other', content: 'Great! When do you think you can share them with the team?', time: '10:17 AM' },
+    { id: 4, sender: 'me', content: 'I should have them ready by EOD. There are a few minor adjustments I want to make first.', time: '10:20 AM' },
+    { id: 5, sender: 'other', content: 'Perfect. The client is eager to see progress, so that timing works well.', time: '10:22 AM' },
+    { id: 6, sender: 'other', content: 'Also, can you review the latest requirements doc? I've made some updates based on our last client call.', time: '10:23 AM' },
+    { id: 7, sender: 'me', content: 'Sure, I'll take a look right after lunch.', time: '10:25 AM' },
+    { id: 8, sender: 'other', content: 'Thanks! Appreciate it.', time: '10:26 AM' },
+    { id: 9, sender: 'me', content: 'No problem. By the way, should we schedule a team check-in before the client demo?', time: '10:30 AM' },
+    { id: 10, sender: 'other', content: 'Definitely. How about tomorrow morning? Around 9:30?', time: '10:32 AM' },
+  ];
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        
-        <div className="flex-1 overflow-hidden p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Messages</h1>
-              <p className="text-muted-foreground">
-                Communicate with your team members
-              </p>
+    <Layout>
+      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+        {/* Sidebar - Contact List */}
+        <div className="w-full max-w-xs border-r flex flex-col bg-background">
+          <div className="p-4 border-b">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-lg">Messages</h2>
+              <div className="flex gap-1">
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>New Message</DialogTitle>
+                      <DialogDescription>
+                        Start a new conversation or create a group chat.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="flex flex-col gap-2">
+                        <label htmlFor="recipients" className="text-sm font-medium">
+                          Recipients
+                        </label>
+                        <Input id="recipients" placeholder="Type a name or email" />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <label htmlFor="message" className="text-sm font-medium">
+                          Message
+                        </label>
+                        <Textarea id="message" placeholder="Type your message" rows={3} />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button type="submit">Send Message</Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+                
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <Button onClick={startNewConversation}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              New Message
-            </Button>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search messages..."
+                className="pl-8"
+              />
+            </div>
           </div>
           
-          <div className="grid grid-cols-12 gap-6 h-[calc(100vh-230px)]">
-            {/* Conversations List */}
-            <Card className="col-span-12 md:col-span-4 flex flex-col overflow-hidden">
-              <div className="p-4 border-b">
+          <div className="overflow-y-auto flex-1">
+            {contacts.map((contact) => (
+              <div 
+                key={contact.id}
+                className={`p-3 flex items-center gap-3 hover:bg-muted/50 cursor-pointer border-b ${activeChat === contact.id ? 'bg-muted' : ''}`}
+                onClick={() => setActiveChat(contact.id)}
+              >
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search messages..."
-                    className="pl-8"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+                  <Avatar>
+                    <AvatarFallback>
+                      {contact.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div 
+                    className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background ${getStatusColor(contact.status)}`}
+                  ></div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start">
+                    <p className="font-medium truncate">{contact.name}</p>
+                    <span className="text-xs text-muted-foreground">{contact.lastActive}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground truncate">{contact.lastMessage}</p>
+                </div>
+                {contact.unread > 0 && (
+                  <Badge variant="default" className="rounded-full h-5 min-w-5 px-1.5">
+                    {contact.unread}
+                  </Badge>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col bg-background">
+          {activeChat ? (
+            <>
+              {/* Chat Header */}
+              <div className="p-4 border-b flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Avatar>
+                    <AvatarFallback>
+                      {contacts.find(c => c.id === activeChat)?.name.split(' ').map(n => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h2 className="font-semibold">{contacts.find(c => c.id === activeChat)?.name}</h2>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <span className={`h-2 w-2 rounded-full ${getStatusColor(contacts.find(c => c.id === activeChat)?.status || 'offline')}`}></span>
+                      {contacts.find(c => c.id === activeChat)?.status === 'online' ? 'Online' : 
+                       contacts.find(c => c.id === activeChat)?.status === 'away' ? 'Away' : 
+                       contacts.find(c => c.id === activeChat)?.status === 'group' ? '5 members' : 'Offline'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Phone className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <VideoIcon className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Info className="h-4 w-4" />
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Conversation</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>Mark as Unread</DropdownMenuItem>
+                      <DropdownMenuItem>Mute Notifications</DropdownMenuItem>
+                      <DropdownMenuItem>View Shared Files</DropdownMenuItem>
+                      <DropdownMenuItem>View Profile</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive">
+                        Archive Conversation
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
-              <ScrollArea className="flex-1">
-                <div className="divide-y">
-                  {filteredConversations.map((conversation) => (
+              
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messageHistory.map((message) => (
+                  <div 
+                    key={message.id} 
+                    className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {message.sender !== 'me' && (
+                      <Avatar className="h-8 w-8 mr-2 mt-1">
+                        <AvatarFallback>
+                          {contacts.find(c => c.id === activeChat)?.name.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div 
-                      key={conversation.id}
-                      className={`p-3 cursor-pointer hover:bg-muted flex items-start gap-3 ${
-                        selectedConversation?.id === conversation.id ? 'bg-muted' : ''
-                      }`}
-                      onClick={() => handleSelectConversation(conversation)}
+                      className={`max-w-[70%] ${
+                        message.sender === 'me' 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'bg-muted'
+                      } p-3 rounded-lg`}
                     >
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>
-                          {conversation.person.name.split(' ').map(name => name[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-medium truncate">
-                            {conversation.person.name}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {conversation.lastMessage.timestamp}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm text-muted-foreground truncate">
-                            {conversation.lastMessage.sender === 'me' && 'You: '}
-                            {conversation.lastMessage.text}
-                          </p>
-                          {!conversation.lastMessage.isRead && 
-                            conversation.lastMessage.sender !== 'me' && (
-                            <Badge variant="default" className="h-2 w-2 rounded-full p-0">
-                              <span className="sr-only">Unread message</span>
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-            </Card>
-            
-            {/* Conversation Detail */}
-            <Card className="col-span-12 md:col-span-8 flex flex-col overflow-hidden">
-              {selectedConversation ? (
-                <>
-                  <div className="p-4 border-b flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>
-                          {selectedConversation.person.name.split(' ').map(name => name[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium">{selectedConversation.person.name}</div>
-                        <div className="text-xs flex items-center gap-1.5">
-                          <span className={`h-1.5 w-1.5 rounded-full ${
-                            selectedConversation.person.isOnline ? 'bg-green-500' : 'bg-muted-foreground'
-                          }`} />
-                          {selectedConversation.person.isOnline ? 'Online' : 'Offline'}
-                        </div>
-                      </div>
+                      <p>{message.content}</p>
+                      <p className={`text-xs mt-1 ${message.sender === 'me' ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{message.time}</p>
                     </div>
                   </div>
-                  
-                  <ScrollArea className="flex-1 p-4">
-                    <div className="space-y-4">
-                      {selectedConversation.messages.map((message) => {
-                        const isMe = message.sender === 'me';
-                        return (
-                          <div 
-                            key={message.id}
-                            className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
-                          >
-                            <div className={`max-w-[80%] ${isMe ? 'bg-primary text-primary-foreground' : 'bg-muted'} rounded-lg p-3`}>
-                              <p className="mb-1">{message.text}</p>
-                              <p className="text-xs opacity-70 text-right">{message.timestamp}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>
-                  
-                  <div className="p-4 border-t">
-                    <div className="flex gap-2">
-                      <Textarea
-                        placeholder="Type your message..."
-                        className="min-h-[60px]"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage();
-                          }
-                        }}
-                      />
-                      <Button 
-                        size="icon" 
-                        className="h-[60px]"
-                        onClick={handleSendMessage}
-                        disabled={!newMessage.trim()}
-                      >
-                        <Send className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center p-6">
-                  <div className="text-center">
-                    <div className="p-4 rounded-full bg-muted inline-flex mb-4">
-                      <Search className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <h3 className="text-lg font-semibold">No conversation selected</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Choose a conversation from the list or start a new one.
-                    </p>
-                    <Button variant="outline" className="mt-4" onClick={startNewConversation}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Message
+                ))}
+              </div>
+              
+              {/* Message Input */}
+              <div className="p-4 border-t">
+                <div className="flex gap-2">
+                  <Button variant="outline" size="icon">
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                  <div className="relative flex-1">
+                    <Textarea
+                      placeholder="Type a message..."
+                      className="min-h-10 resize-none pl-3 pr-10 py-2"
+                      rows={1}
+                    />
+                    <Button className="absolute right-1 bottom-1" size="icon" variant="ghost">
+                      <Send className="h-4 w-4 text-primary" />
                     </Button>
                   </div>
                 </div>
-              )}
-            </Card>
-          </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+              <div className="mb-4 p-4 rounded-full bg-muted">
+                <MessageSquarePlus className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">No Conversation Selected</h3>
+              <p className="text-muted-foreground mb-4 max-w-md">
+                Select a conversation from the sidebar or start a new one.
+              </p>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Message
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>New Message</DialogTitle>
+                    <DialogDescription>
+                      Start a new conversation or create a group chat.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="recipients-empty" className="text-sm font-medium">
+                        Recipients
+                      </label>
+                      <Input id="recipients-empty" placeholder="Type a name or email" />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="message-empty" className="text-sm font-medium">
+                        Message
+                      </label>
+                      <Textarea id="message-empty" placeholder="Type your message" rows={3} />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit">Send Message</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
         </div>
-      </main>
-    </div>
+      </div>
+    </Layout>
   );
 };
 

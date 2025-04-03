@@ -1,220 +1,242 @@
 
-import { useState } from 'react';
-import { Calendar, ChevronRight, Clock, Folder, LayoutGrid, List, Plus } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sidebar } from '@/components/Sidebar';
-import { Header } from '@/components/Header';
-import { ProjectCard } from '@/components/ProjectCard';
-import { DocumentItem } from '@/components/DocumentItem';
-import { ActivityFeed } from '@/components/ActivityFeed';
-import { documents, getRecentActivities, projects } from '@/data/mockData';
+import { ArrowRight, Info, PlusCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import OnboardingModal from '@/components/OnboardingModal';
 
-const Dashboard = () => {
-  const recentActivities = getRecentActivities(5);
-  const [view, setView] = useState<"grid" | "list">("grid");
+const Index = () => {
+  const { user } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboardingComplete'));
   
+  const completeOnboarding = () => {
+    localStorage.setItem('onboardingComplete', 'true');
+    setShowOnboarding(false);
+  };
+
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
+    <Layout>
+      {showOnboarding && <OnboardingModal onComplete={completeOnboarding} />}
       
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        
-        <div className="flex-1 overflow-auto p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-              <p className="text-muted-foreground">
-                Welcome back! Here's an overview of your team's progress.
-              </p>
+      <div className="container mx-auto py-6 space-y-8">
+        <div className="flex flex-col md:flex-row gap-4 md:items-center md:justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Welcome, {user?.email?.split('@')[0] || 'User'}</h2>
+            <p className="text-muted-foreground">
+              Access all your project tracking and management tools in one place.
+            </p>
+          </div>
+          <Button className="w-full md:w-auto">
+            <PlusCircle className="mr-2 h-4 w-4" /> New Project
+          </Button>
+        </div>
+
+        <Tabs defaultValue="overview" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="recent">Recent Activity</TabsTrigger>
+            <TabsTrigger value="insights">Insights</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle>Projects</CardTitle>
+                  <CardDescription>Track and manage all your projects.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">7</div>
+                  <p className="text-xs text-muted-foreground">Active projects</p>
+                </CardContent>
+                <CardFooter>
+                  <Link to="/projects" className="w-full">
+                    <Button variant="secondary" className="w-full">
+                      View All Projects
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle>Team</CardTitle>
+                  <CardDescription>Manage your team and collaborators.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">12</div>
+                  <p className="text-xs text-muted-foreground">Team members</p>
+                </CardContent>
+                <CardFooter>
+                  <Link to="/team" className="w-full">
+                    <Button variant="secondary" className="w-full">
+                      View Team
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle>Tasks</CardTitle>
+                  <CardDescription>Manage and track project tasks.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">23</div>
+                  <p className="text-xs text-muted-foreground">Open tasks</p>
+                </CardContent>
+                <CardFooter>
+                  <Button variant="secondary" className="w-full">
+                    View All Tasks
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </CardFooter>
+              </Card>
             </div>
             
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              New Project
-            </Button>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
-                <Folder className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{projects.length}</div>
-                <p className="text-xs text-muted-foreground">
-                  +2 since last month
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Documents</CardTitle>
-                <Folder className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{documents.length}</div>
-                <p className="text-xs text-muted-foreground">
-                  +8 added this week
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Next Deadline</CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">Nov 30</div>
-                <p className="text-xs text-muted-foreground">
-                  Content Strategy project
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Hours Tracked</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">248h</div>
-                <p className="text-xs text-muted-foreground">
-                  +12% from last week
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="space-y-6 md:col-span-2">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold tracking-tight">Projects</h2>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant={view === "grid" ? "secondary" : "ghost"} 
-                    size="icon"
-                    onClick={() => setView("grid")}
-                  >
-                    <LayoutGrid className="h-4 w-4" />
+            <div className="grid gap-4 md:grid-cols-2">
+              <Card className="col-span-1">
+                <CardHeader>
+                  <CardTitle>Quick Start Guide</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="grid grid-cols-[24px_1fr] items-start pb-4 gap-4">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                      1
+                    </span>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        Invite your team members
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Start collaborating by inviting your team
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-[24px_1fr] items-start pb-4 gap-4">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                      2
+                    </span>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        Create your first project
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Set up a project and define milestones
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-[24px_1fr] items-start pb-4 gap-4">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                      3
+                    </span>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        Add and assign tasks
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Break down projects into actionable tasks
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button variant="outline" className="w-full" onClick={() => setShowOnboarding(true)}>
+                    <Info className="mr-2 h-4 w-4" />
+                    Show Onboarding Guide
                   </Button>
-                  <Button 
-                    variant={view === "list" ? "secondary" : "ghost"} 
-                    size="icon"
-                    onClick={() => setView("list")}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" className="gap-1">
-                    View All <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
+                </CardFooter>
+              </Card>
               
-              {view === "grid" ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {projects.slice(0, 4).map((project) => (
-                    <ProjectCard key={project.id} project={project} />
-                  ))}
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="p-0">
-                    <Tabs defaultValue="in-progress">
-                      <div className="border-b px-3">
-                        <TabsList className="justify-start h-12">
-                          <TabsTrigger value="in-progress" className="text-sm">In Progress</TabsTrigger>
-                          <TabsTrigger value="completed" className="text-sm">Completed</TabsTrigger>
-                          <TabsTrigger value="all" className="text-sm">All</TabsTrigger>
-                        </TabsList>
+              <Card className="col-span-1">
+                <CardHeader>
+                  <CardTitle>Recent Updates</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-4">
+                      <div className="rounded-full bg-secondary w-2 h-2 mt-2"></div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">New document added to Project Alpha</p>
+                        <p className="text-xs text-muted-foreground">2 hours ago</p>
                       </div>
-                      
-                      <TabsContent value="in-progress" className="m-0">
-                        <div className="divide-y">
-                          {projects.filter(p => p.progress < 100).map((project) => (
-                            <div key={project.id} className="p-4">
-                              <h3 className="font-semibold">{project.name}</h3>
-                              <p className="text-sm text-muted-foreground mb-2">{project.description}</p>
-                              <div className="flex justify-between text-sm mb-1">
-                                <span>Progress</span>
-                                <span className="font-medium">{project.progress}%</span>
-                              </div>
-                              <div className="w-full bg-muted rounded-full h-2 mb-2">
-                                <div 
-                                  className="bg-primary h-2 rounded-full" 
-                                  style={{ width: `${project.progress}%` }} 
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="completed" className="m-0">
-                        <div className="py-6 text-center">
-                          <p className="text-muted-foreground">No completed projects yet.</p>
-                        </div>
-                      </TabsContent>
-
-                      <TabsContent value="all" className="m-0">
-                        <div className="divide-y">
-                          {projects.map((project) => (
-                            <div key={project.id} className="p-4">
-                              <h3 className="font-semibold">{project.name}</h3>
-                              <p className="text-sm text-muted-foreground mb-2">{project.description}</p>
-                              <div className="flex justify-between text-sm mb-1">
-                                <span>Progress</span>
-                                <span className="font-medium">{project.progress}%</span>
-                              </div>
-                              <div className="w-full bg-muted rounded-full h-2 mb-2">
-                                <div 
-                                  className="bg-primary h-2 rounded-full" 
-                                  style={{ width: `${project.progress}%` }} 
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </TabsContent>
-                    </Tabs>
-                  </CardContent>
-                </Card>
-              )}
-              
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold tracking-tight">Recent Documents</h2>
-                  <Button variant="outline" size="sm" className="gap-1">
-                    View All <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                <div className="space-y-3">
-                  {documents.slice(0, 3).map((doc) => (
-                    <DocumentItem key={doc.id} document={doc} />
-                  ))}
-                </div>
-              </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <div className="rounded-full bg-secondary w-2 h-2 mt-2"></div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Task completed by David Miller</p>
+                        <p className="text-xs text-muted-foreground">Yesterday</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <div className="rounded-full bg-secondary w-2 h-2 mt-2"></div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">New team member joined</p>
+                        <p className="text-xs text-muted-foreground">3 days ago</p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-            
+          </TabsContent>
+          
+          <TabsContent value="recent" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Activity</CardTitle>
+                <CardTitle>Recent Activity</CardTitle>
+                <CardDescription>
+                  See what's been happening across your projects
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <ActivityFeed activities={recentActivities} />
+                <div className="space-y-6">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-start space-x-4 border-b pb-4 last:border-0">
+                      <div className="rounded-full bg-primary/10 p-2">
+                        <div className="h-4 w-4 rounded-full bg-primary" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">Activity {i}</p>
+                        <p className="text-sm text-muted-foreground">
+                          This is a brief description of the activity
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {i} hour{i !== 1 ? 's' : ''} ago
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
-          </div>
-        </div>
-      </main>
-    </div>
+          </TabsContent>
+          
+          <TabsContent value="insights" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Performance Insights</CardTitle>
+                <CardDescription>
+                  Analytics and performance metrics for your projects
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-center py-12 text-muted-foreground">
+                  Insights dashboard will be available in the next release
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </Layout>
   );
 };
 
-export default Dashboard;
+export default Index;
