@@ -24,31 +24,82 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Copy, Mail, MoreHorizontal, Plus, UserPlus } from 'lucide-react';
+import { Copy, Mail, MoreHorizontal, Plus, UserPlus, Users } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from "@/components/ui/use-toast";
 
 const Team = () => {
   const [open, setOpen] = useState(false);
   const [inviteLink, setInviteLink] = useState('https://progresshub.app/invite/team123');
-
-  const teamMembers = [
-    { id: 1, name: 'Alex Johnson', role: 'Admin', email: 'alex@example.com', avatar: '' },
-    { id: 2, name: 'Sarah Miller', role: 'Manager', email: 'sarah@example.com', avatar: '' },
-    { id: 3, name: 'David Lee', role: 'Developer', email: 'david@example.com', avatar: '' },
-    { id: 4, name: 'Emily Chen', role: 'Designer', email: 'emily@example.com', avatar: '' },
-    { id: 5, name: 'Michael Brown', role: 'Developer', email: 'michael@example.com', avatar: '' },
-  ];
-
-  const pendingInvites = [
-    { id: 1, email: 'john@example.com', role: 'Developer', sent: '2 days ago' },
-    { id: 2, email: 'lisa@example.com', role: 'Manager', sent: 'Yesterday' },
-  ];
-
+  const [teamMembers, setTeamMembers] = useState<Array<{ id: number; name: string; role: string; email: string; avatar: string; }>>([]);
+  const [pendingInvites, setPendingInvites] = useState<Array<{ id: number; email: string; role: string; sent: string; }>>([]);
+  const [newInviteEmail, setNewInviteEmail] = useState('');
+  const [newInviteRole, setNewInviteRole] = useState('');
+  const [newInviteMessage, setNewInviteMessage] = useState('');
+  const { toast } = useToast();
+  
   const copyInviteLink = () => {
     navigator.clipboard.writeText(inviteLink);
-    // You would add a toast notification here in a real app
-    console.log('Copied to clipboard!');
+    toast({
+      title: "Link copied!",
+      description: "Invitation link has been copied to your clipboard.",
+    });
+  };
+
+  const handleSendInvitation = () => {
+    if (!newInviteEmail) {
+      toast({
+        title: "Email required",
+        description: "Please enter an email address for the invitation.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!newInviteRole) {
+      toast({
+        title: "Role required",
+        description: "Please select a role for the new team member.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Add to pending invites
+    const newInvite = {
+      id: Date.now(),
+      email: newInviteEmail,
+      role: newInviteRole,
+      sent: 'Just now'
+    };
+
+    setPendingInvites([...pendingInvites, newInvite]);
+    
+    // Reset form
+    setNewInviteEmail('');
+    setNewInviteRole('');
+    setNewInviteMessage('');
+    
+    toast({
+      title: "Invitation sent!",
+      description: `Invitation email has been sent to ${newInviteEmail}`,
+    });
+  };
+
+  const handleCancelInvite = (id: number) => {
+    setPendingInvites(pendingInvites.filter(invite => invite.id !== id));
+    toast({
+      title: "Invitation cancelled",
+      description: "The invitation has been cancelled successfully.",
+    });
+  };
+
+  const handleResendInvite = (id: number) => {
+    toast({
+      title: "Invitation resent",
+      description: "The invitation has been resent successfully.",
+    });
   };
 
   return (
@@ -85,13 +136,15 @@ const Team = () => {
                       id="email"
                       placeholder="colleague@example.com"
                       className="col-span-3"
+                      value={newInviteEmail}
+                      onChange={(e) => setNewInviteEmail(e.target.value)}
                     />
                   </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="role" className="text-right">
                       Role
                     </Label>
-                    <Select>
+                    <Select value={newInviteRole} onValueChange={setNewInviteRole}>
                       <SelectTrigger className="col-span-3">
                         <SelectValue placeholder="Select a role" />
                       </SelectTrigger>
@@ -111,11 +164,13 @@ const Team = () => {
                       id="message"
                       placeholder="Optional message"
                       className="col-span-3"
+                      value={newInviteMessage}
+                      onChange={(e) => setNewInviteMessage(e.target.value)}
                     />
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit">Send Invitation</Button>
+                  <Button type="submit" onClick={handleSendInvitation}>Send Invitation</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -200,67 +255,140 @@ const Team = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-medium">Name</th>
-                        <th className="text-left py-3 px-4 font-medium">Role</th>
-                        <th className="text-left py-3 px-4 font-medium">Email</th>
-                        <th className="text-left py-3 px-4 font-medium">Status</th>
-                        <th className="text-right py-3 px-4 font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teamMembers.map((member) => (
-                        <tr key={member.id} className="border-b">
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-3">
-                              <Avatar>
-                                <AvatarImage src={member.avatar} />
-                                <AvatarFallback>
-                                  {member.name.split(' ').map(n => n[0]).join('')}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span>{member.name}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <Badge variant={member.role === 'Admin' ? 'default' : 'outline'}>
-                              {member.role}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4">{member.email}</td>
-                          <td className="py-3 px-4">
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              Active
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4 text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem>Edit Role</DropdownMenuItem>
-                                <DropdownMenuItem>View Profile</DropdownMenuItem>
-                                <DropdownMenuItem>Assign to Projects</DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive">
-                                  Remove from Team
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
+                {teamMembers.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-4 font-medium">Name</th>
+                          <th className="text-left py-3 px-4 font-medium">Role</th>
+                          <th className="text-left py-3 px-4 font-medium">Email</th>
+                          <th className="text-left py-3 px-4 font-medium">Status</th>
+                          <th className="text-right py-3 px-4 font-medium">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {teamMembers.map((member) => (
+                          <tr key={member.id} className="border-b">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-3">
+                                <Avatar>
+                                  <AvatarImage src={member.avatar} />
+                                  <AvatarFallback>
+                                    {member.name.split(' ').map(n => n[0]).join('')}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span>{member.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge variant={member.role === 'admin' ? 'default' : 'outline'}>
+                                {member.role}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4">{member.email}</td>
+                            <td className="py-3 px-4">
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                Active
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem>Edit Role</DropdownMenuItem>
+                                  <DropdownMenuItem>View Profile</DropdownMenuItem>
+                                  <DropdownMenuItem>Assign to Projects</DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem className="text-destructive">
+                                    Remove from Team
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="rounded-full bg-muted p-6 mb-4">
+                      <Users className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-xl font-semibold">No Team Members Yet</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto mt-2 mb-6">
+                      Get started by inviting people to join your team. Team members will appear here once they accept the invitation.
+                    </p>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Invite Your First Team Member
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Invite Team Member</DialogTitle>
+                          <DialogDescription>
+                            Send an invitation to join your team. They'll receive an email with instructions.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="email-empty" className="text-right">
+                              Email
+                            </Label>
+                            <Input
+                              id="email-empty"
+                              placeholder="colleague@example.com"
+                              className="col-span-3"
+                              value={newInviteEmail}
+                              onChange={(e) => setNewInviteEmail(e.target.value)}
+                            />
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="role-empty" className="text-right">
+                              Role
+                            </Label>
+                            <Select value={newInviteRole} onValueChange={setNewInviteRole}>
+                              <SelectTrigger className="col-span-3">
+                                <SelectValue placeholder="Select a role" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="admin">Admin</SelectItem>
+                                <SelectItem value="manager">Manager</SelectItem>
+                                <SelectItem value="developer">Developer</SelectItem>
+                                <SelectItem value="viewer">Viewer</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="message-empty" className="text-right">
+                              Message
+                            </Label>
+                            <Input
+                              id="message-empty"
+                              placeholder="Optional message"
+                              className="col-span-3"
+                              value={newInviteMessage}
+                              onChange={(e) => setNewInviteMessage(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button type="submit" onClick={handleSendInvitation}>Send Invitation</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -295,8 +423,20 @@ const Team = () => {
                             <td className="py-3 px-4">{invite.sent}</td>
                             <td className="py-3 px-4 text-right">
                               <div className="flex justify-end gap-2">
-                                <Button variant="outline" size="sm">Resend</Button>
-                                <Button variant="destructive" size="sm">Cancel</Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => handleResendInvite(invite.id)}
+                                >
+                                  Resend
+                                </Button>
+                                <Button 
+                                  variant="destructive" 
+                                  size="sm" 
+                                  onClick={() => handleCancelInvite(invite.id)}
+                                >
+                                  Cancel
+                                </Button>
                               </div>
                             </td>
                           </tr>
@@ -305,8 +445,14 @@ const Team = () => {
                     </table>
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground">No pending invitations</p>
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="rounded-full bg-muted p-6 mb-4">
+                      <Mail className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-xl font-semibold">No Pending Invitations</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto mt-2">
+                      When you invite team members, pending invitations will appear here until they are accepted.
+                    </p>
                   </div>
                 )}
               </CardContent>
@@ -328,61 +474,21 @@ const Team = () => {
                 </Button>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">Development</CardTitle>
-                      <CardDescription>3 members</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex -space-x-2">
-                        {teamMembers.slice(0, 3).map((member) => (
-                          <Avatar key={member.id} className="border-2 border-background">
-                            <AvatarFallback>
-                              {member.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">Design</CardTitle>
-                      <CardDescription>2 members</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex -space-x-2">
-                        {teamMembers.slice(3, 5).map((member) => (
-                          <Avatar key={member.id} className="border-2 border-background">
-                            <AvatarFallback>
-                              {member.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">Management</CardTitle>
-                      <CardDescription>1 member</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex -space-x-2">
-                        {teamMembers.slice(1, 2).map((member) => (
-                          <Avatar key={member.id} className="border-2 border-background">
-                            <AvatarFallback>
-                              {member.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                {teamMembers.length > 0 ? (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {/* Group cards would go here */}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="rounded-full bg-muted p-6 mb-4">
+                      <Users className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-xl font-semibold">No Groups Created</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto mt-2 mb-6">
+                      Groups help you organize your team members for different projects and responsibilities. Add team members first before creating groups.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

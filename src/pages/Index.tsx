@@ -4,10 +4,11 @@ import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowRight, Info, PlusCircle } from 'lucide-react';
+import { ArrowRight, FileText, Info, PlusCircle, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import OnboardingModal from '@/components/OnboardingModal';
+import { projects } from '@/data/mockData';
 
 const Index = () => {
   const { user } = useAuth();
@@ -30,9 +31,11 @@ const Index = () => {
               Access all your project tracking and management tools in one place.
             </p>
           </div>
-          <Button className="w-full md:w-auto">
-            <PlusCircle className="mr-2 h-4 w-4" /> New Project
-          </Button>
+          <Link to="/projects">
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" /> New Project
+            </Button>
+          </Link>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-4">
@@ -50,7 +53,7 @@ const Index = () => {
                   <CardDescription>Track and manage all your projects.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">7</div>
+                  <div className="text-2xl font-bold">{projects.length}</div>
                   <p className="text-xs text-muted-foreground">Active projects</p>
                 </CardContent>
                 <CardFooter>
@@ -69,7 +72,7 @@ const Index = () => {
                   <CardDescription>Manage your team and collaborators.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">12</div>
+                  <div className="text-2xl font-bold">0</div>
                   <p className="text-xs text-muted-foreground">Team members</p>
                 </CardContent>
                 <CardFooter>
@@ -88,7 +91,7 @@ const Index = () => {
                   <CardDescription>Manage and track project tasks.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">23</div>
+                  <div className="text-2xl font-bold">0</div>
                   <p className="text-xs text-muted-foreground">Open tasks</p>
                 </CardContent>
                 <CardFooter>
@@ -159,29 +162,25 @@ const Index = () => {
                   <CardTitle>Recent Updates</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-4">
-                      <div className="rounded-full bg-secondary w-2 h-2 mt-2"></div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">New document added to Project Alpha</p>
-                        <p className="text-xs text-muted-foreground">2 hours ago</p>
+                  {projects.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-4">
+                        <div className="rounded-full bg-secondary w-2 h-2 mt-2"></div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">Updates will appear here</p>
+                          <p className="text-xs text-muted-foreground">As you work with your team</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-start gap-4">
-                      <div className="rounded-full bg-secondary w-2 h-2 mt-2"></div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">Task completed by David Miller</p>
-                        <p className="text-xs text-muted-foreground">Yesterday</p>
-                      </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-6 text-center">
+                      <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground">No recent updates yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Updates will appear here as you work with your team
+                      </p>
                     </div>
-                    <div className="flex items-start gap-4">
-                      <div className="rounded-full bg-secondary w-2 h-2 mt-2"></div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">New team member joined</p>
-                        <p className="text-xs text-muted-foreground">3 days ago</p>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -196,23 +195,14 @@ const Index = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-6">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="flex items-start space-x-4 border-b pb-4 last:border-0">
-                      <div className="rounded-full bg-primary/10 p-2">
-                        <div className="h-4 w-4 rounded-full bg-primary" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">Activity {i}</p>
-                        <p className="text-sm text-muted-foreground">
-                          This is a brief description of the activity
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {i} hour{i !== 1 ? 's' : ''} ago
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="rounded-full bg-muted p-6 mb-4">
+                    <FileText className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold">No Recent Activity</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto mt-2">
+                    Activity will be displayed here once you and your team start working on projects.
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -227,9 +217,15 @@ const Index = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-center py-12 text-muted-foreground">
-                  Insights dashboard will be available in the next release
-                </p>
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="rounded-full bg-muted p-6 mb-4">
+                    <Users className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-semibold">No Insights Available</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto mt-2">
+                    Insights and metrics will become available as you add projects and team members.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
