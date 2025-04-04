@@ -31,8 +31,10 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Database } from '@/integrations/supabase/types';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 type TeamInvitation = Database['public']['Tables']['team_invitations']['Row'];
+type TeamMember = Database['public']['Tables']['team_members']['Row'];
 
 const Team = () => {
   const { user } = useAuth();
@@ -45,53 +47,118 @@ const Team = () => {
   const [newInviteRole, setNewInviteRole] = useState('');
   const [newInviteMessage, setNewInviteMessage] = useState('');
   const [pendingInvitations, setPendingInvitations] = useState<TeamInvitation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchPendingInvitations();
+    if (user) {
+      fetchPendingInvitations();
+    }
   }, [user]);
 
   const fetchPendingInvitations = async () => {
     if (!user) return;
+    
+    setIsLoading(true);
+    
+    try {
+      console.log("Fetching invitations for email:", user.email);
+      const { data, error } = await supabase
+        .from('team_invitations')
+        .select('*')
+        .eq('email', user.email)
+        .eq('status', 'pending');
 
-    const { data, error } = await supabase
-      .from('team_invitations')
-      .select('*')
-      .eq('email', user.email)
-      .eq('status', 'pending');
+      if (error) {
+        console.error('Error fetching invitations:', error);
+        toast({
+          title: "Error",
+          description: "Could not fetch invitations: " + error.message,
+          variant: "destructive"
+        });
+        return;
+      }
 
-    if (error) {
-      console.error('Error fetching invitations:', error);
-      return;
+      console.log("Invitations data:", data);
+      setPendingInvitations(data || []);
+    } catch (error) {
+      console.error('Unexpected error fetching invitations:', error);
+    } finally {
+      setIsLoading(false);
     }
-
-    setPendingInvitations(data || []);
   };
 
   const handleAcceptInvitation = async (invitationId: string) => {
-    const { error } = await supabase
-      .from('team_invitations')
-      .update({ 
-        status: 'accepted', 
-        invited_user_id: user?.id,
-        updated_at: new Date().toISOString() 
-      })
-      .eq('id', invitationId);
+    try {
+      // First update the invitation status
+      const { error } = await supabase
+        .from('team_invitations')
+        .update({ 
+          status: 'accepted', 
+          invited_user_id: user?.id,
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', invitationId);
 
-    if (error) {
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Could not accept invitation: " + error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Get the invitation details to add the user as a team member
+      const { data: invitation, error: fetchError } = await supabase
+        .from('team_invitations')
+        .select('*')
+        .eq('id', invitationId)
+        .single();
+
+      if (fetchError || !invitation) {
+        toast({
+          title: "Error",
+          description: "Could not fetch invitation details",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Add the user to the team_members table
+      if (user) {
+        const { error: memberError } = await supabase
+          .from('team_members')
+          .insert({
+            team_id: invitation.team_id,
+            user_id: user.id,
+            email: user.email || '',
+            role: invitation.role
+          });
+
+        if (memberError) {
+          toast({
+            title: "Error",
+            description: "Could not add you to the team: " + memberError.message,
+            variant: "destructive"
+          });
+          return;
+        }
+      }
+
+      toast({
+        title: "Invitation Accepted",
+        description: "You have joined the team!"
+      });
+
+      fetchPendingInvitations();
+    } catch (error) {
+      console.error('Error accepting invitation:', error);
       toast({
         title: "Error",
-        description: "Could not accept invitation: " + error.message,
+        description: "An unexpected error occurred",
         variant: "destructive"
       });
-      return;
     }
-
-    toast({
-      title: "Invitation Accepted",
-      description: "You have joined the team!"
-    });
-
-    fetchPendingInvitations();
   };
 
   const copyInviteLink = () => {
@@ -121,33 +188,88 @@ const Team = () => {
       return;
     }
 
-    const { error } = await supabase
-      .from('team_invitations')
-      .insert({
-        email: newInviteEmail,
-        inviter_id: user.id,
-        role: newInviteRole,
-        status: 'pending'
+    try {
+      // First, check if we already have a team or need to create one
+      let teamId: string;
+      
+      // Check if user owns a team
+      const { data: existingTeams, error: teamError } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('owner_id', user.id);
+        
+      if (teamError) {
+        throw new Error(`Error checking teams: ${teamError.message}`);
+      }
+      
+      if (!existingTeams || existingTeams.length === 0) {
+        // Create a team for this user
+        const { data: newTeam, error: createTeamError } = await supabase
+          .from('teams')
+          .insert({
+            name: `${user.email}'s Team`,
+            owner_id: user.id
+          })
+          .select()
+          .single();
+          
+        if (createTeamError || !newTeam) {
+          throw new Error(`Could not create team: ${createTeamError?.message}`);
+        }
+        
+        teamId = newTeam.id;
+        
+        // Add user as a team member with admin role
+        await supabase
+          .from('team_members')
+          .insert({
+            team_id: teamId,
+            user_id: user.id,
+            email: user.email || '',
+            role: 'admin'
+          });
+      } else {
+        teamId = existingTeams[0].id;
+      }
+      
+      // Now create the invitation
+      const { error } = await supabase
+        .from('team_invitations')
+        .insert({
+          email: newInviteEmail,
+          inviter_id: user.id,
+          team_id: teamId,
+          role: newInviteRole,
+          status: 'pending',
+          message: newInviteMessage || null
+        });
+
+      if (error) {
+        console.error('Error sending invitation:', error);
+        toast({
+          title: "Error",
+          description: "Could not send invitation: " + error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Invitation Sent",
+        description: `Invitation sent to ${newInviteEmail}`
       });
 
-    if (error) {
-      console.error('Error sending invitation:', error);
+      setNewInviteEmail('');
+      setNewInviteRole('');
+      setNewInviteMessage('');
+    } catch (error) {
+      console.error('Error in send invitation flow:', error);
       toast({
         title: "Error",
-        description: "Could not send invitation: " + error.message,
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
         variant: "destructive"
       });
-      return;
     }
-
-    toast({
-      title: "Invitation Sent",
-      description: `Invitation sent to ${newInviteEmail}`
-    });
-
-    setNewInviteEmail('');
-    setNewInviteRole('');
-    setNewInviteMessage('');
   };
 
   const handleCancelInvite = (id: number) => {
@@ -532,26 +654,42 @@ const Team = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {pendingInvitations.length > 0 ? (
+                {isLoading ? (
+                  <div className="flex justify-center py-8">
+                    <p>Loading invitations...</p>
+                  </div>
+                ) : pendingInvitations.length > 0 ? (
                   <div className="space-y-4">
-                    {pendingInvitations.map((invitation) => (
-                      <div 
-                        key={invitation.id} 
-                        className="flex items-center justify-between p-4 border rounded-lg"
-                      >
-                        <div>
-                          <p className="font-medium">Invitation from {invitation.inviter_id}</p>
-                          <p className="text-sm text-muted-foreground">
-                            Role: {invitation.role}
-                          </p>
-                        </div>
-                        <Button 
-                          onClick={() => handleAcceptInvitation(invitation.id)}
-                        >
-                          Accept Invitation
-                        </Button>
-                      </div>
-                    ))}
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>From</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingInvitations.map((invitation) => (
+                          <TableRow key={invitation.id}>
+                            <TableCell>{invitation.email}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{invitation.role}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              {new Date(invitation.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                onClick={() => handleAcceptInvitation(invitation.id)}
+                              >
+                                Accept
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
