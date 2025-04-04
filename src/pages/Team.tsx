@@ -37,13 +37,29 @@ import { format } from "date-fns";
 type TeamInvitation = Database['public']['Tables']['team_invitations']['Row'];
 type TeamMember = Database['public']['Tables']['team_members']['Row'];
 
+// Update interfaces to use string IDs instead of number
+interface TeamMemberDisplay {
+  id: string;
+  name: string;
+  role: string;
+  email: string;
+  avatar: string;
+}
+
+interface PendingInviteDisplay {
+  id: string;
+  email: string;
+  role: string;
+  sent: string;
+}
+
 const Team = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [inviteLink, setInviteLink] = useState('https://progresshub.app/invite/team123');
-  const [teamMembers, setTeamMembers] = useState<Array<{ id: number; name: string; role: string; email: string; avatar: string; }>>([]);
-  const [pendingInvites, setPendingInvites] = useState<Array<{ id: number; email: string; role: string; sent: string; }>>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMemberDisplay[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInviteDisplay[]>([]);
   const [newInviteEmail, setNewInviteEmail] = useState('');
   const [newInviteRole, setNewInviteRole] = useState('');
   const [newInviteMessage, setNewInviteMessage] = useState('');
@@ -55,6 +71,7 @@ const Team = () => {
     if (user) {
       fetchPendingInvitations();
       fetchTeamMembers();
+      fetchSentInvitations();
     }
   }, [user]);
 
@@ -140,9 +157,8 @@ const Team = () => {
         return;
       }
       
-      // Format member data for the UI
-      // This is a simplified example - in a real app, you'd want to also fetch user profiles
-      const formattedMembers = members?.map(member => ({
+      // Format member data for the UI with string IDs
+      const formattedMembers: TeamMemberDisplay[] = members?.map(member => ({
         id: member.id,
         name: member.email.split('@')[0], // Simple fallback name from email
         role: member.role,
@@ -171,8 +187,8 @@ const Team = () => {
         return;
       }
       
-      // Convert to the format expected by the UI
-      const formattedInvites = data?.map(invite => ({
+      // Convert to the format expected by the UI with string IDs
+      const formattedInvites: PendingInviteDisplay[] = data?.map(invite => ({
         id: invite.id,
         email: invite.email,
         role: invite.role,
@@ -395,7 +411,7 @@ const Team = () => {
     }
   };
 
-  const handleCancelInvite = async (id: number) => {
+  const handleCancelInvite = async (id: string) => {
     try {
       const { error } = await supabase
         .from('team_invitations')
@@ -427,7 +443,7 @@ const Team = () => {
     }
   };
 
-  const handleResendInvite = async (id: number) => {
+  const handleResendInvite = async (id: string) => {
     try {
       // Just update the timestamp to "resend"
       const { error } = await supabase
