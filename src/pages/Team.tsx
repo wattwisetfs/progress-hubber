@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Database } from '@/integrations/supabase/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { format } from "date-fns";
 
 type TeamInvitation = Database['public']['Tables']['team_invitations']['Row'];
 type TeamMember = Database['public']['Tables']['team_members']['Row'];
@@ -48,10 +49,12 @@ const Team = () => {
   const [newInviteMessage, setNewInviteMessage] = useState('');
   const [pendingInvitations, setPendingInvitations] = useState<TeamInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       fetchPendingInvitations();
+      fetchTeamMembers();
     }
   }, [user]);
 
@@ -59,6 +62,7 @@ const Team = () => {
     if (!user) return;
     
     setIsLoading(true);
+    setError(null);
     
     try {
       console.log("Fetching invitations for email:", user.email);
@@ -70,6 +74,7 @@ const Team = () => {
 
       if (error) {
         console.error('Error fetching invitations:', error);
+        setError(`Could not fetch invitations: ${error.message}`);
         toast({
           title: "Error",
           description: "Could not fetch invitations: " + error.message,
@@ -82,14 +87,123 @@ const Team = () => {
       setPendingInvitations(data || []);
     } catch (error) {
       console.error('Unexpected error fetching invitations:', error);
+      setError('An unexpected error occurred while fetching invitations');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const fetchTeamMembers = async () => {
+    if (!user) return;
+    
+    try {
+      // First get teams where user is a member
+      const { data: teamMemberships, error: membershipError } = await supabase
+        .from('team_members')
+        .select('team_id')
+        .eq('user_id', user.id);
+      
+      if (membershipError) {
+        console.error('Error fetching team memberships:', membershipError);
+        return;
+      }
+      
+      // Get teams owned by the user
+      const { data: ownedTeams, error: ownedTeamsError } = await supabase
+        .from('teams')
+        .select('id')
+        .eq('owner_id', user.id);
+        
+      if (ownedTeamsError) {
+        console.error('Error fetching owned teams:', ownedTeamsError);
+        return;
+      }
+      
+      // Combine all team IDs
+      const teamIds = [
+        ...(teamMemberships || []).map(tm => tm.team_id),
+        ...(ownedTeams || []).map(t => t.id)
+      ];
+      
+      if (teamIds.length === 0) {
+        return; // No teams to fetch members for
+      }
+      
+      // Get all members from these teams
+      const { data: members, error: membersError } = await supabase
+        .from('team_members')
+        .select('*')
+        .in('team_id', teamIds);
+        
+      if (membersError) {
+        console.error('Error fetching team members:', membersError);
+        return;
+      }
+      
+      // Format member data for the UI
+      // This is a simplified example - in a real app, you'd want to also fetch user profiles
+      const formattedMembers = members?.map(member => ({
+        id: member.id,
+        name: member.email.split('@')[0], // Simple fallback name from email
+        role: member.role,
+        email: member.email,
+        avatar: ''
+      })) || [];
+      
+      setTeamMembers(formattedMembers);
+    } catch (error) {
+      console.error('Unexpected error fetching team members:', error);
+    }
+  };
+
+  const fetchSentInvitations = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('team_invitations')
+        .select('*')
+        .eq('inviter_id', user.id)
+        .eq('status', 'pending');
+        
+      if (error) {
+        console.error('Error fetching sent invitations:', error);
+        return;
+      }
+      
+      // Convert to the format expected by the UI
+      const formattedInvites = data?.map(invite => ({
+        id: invite.id,
+        email: invite.email,
+        role: invite.role,
+        sent: format(new Date(invite.created_at), 'PP')
+      })) || [];
+      
+      setPendingInvites(formattedInvites);
+    } catch (error) {
+      console.error('Unexpected error fetching sent invitations:', error);
+    }
+  };
+
   const handleAcceptInvitation = async (invitationId: string) => {
     try {
-      // First update the invitation status
+      // Get the invitation details first to make sure we have the team_id
+      const { data: invitation, error: fetchError } = await supabase
+        .from('team_invitations')
+        .select('*')
+        .eq('id', invitationId)
+        .single();
+
+      if (fetchError || !invitation) {
+        toast({
+          title: "Error",
+          description: "Could not fetch invitation details: " + (fetchError?.message || "Not found"),
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Then update the invitation status
       const { error } = await supabase
         .from('team_invitations')
         .update({ 
@@ -108,40 +222,39 @@ const Team = () => {
         return;
       }
 
-      // Get the invitation details to add the user as a team member
-      const { data: invitation, error: fetchError } = await supabase
-        .from('team_invitations')
-        .select('*')
-        .eq('id', invitationId)
-        .single();
-
-      if (fetchError || !invitation) {
-        toast({
-          title: "Error",
-          description: "Could not fetch invitation details",
-          variant: "destructive"
-        });
-        return;
-      }
-
       // Add the user to the team_members table
       if (user) {
-        const { error: memberError } = await supabase
+        // Check if the user is already a member of this team
+        const { data: existingMember, error: checkError } = await supabase
           .from('team_members')
-          .insert({
-            team_id: invitation.team_id,
-            user_id: user.id,
-            email: user.email || '',
-            role: invitation.role
-          });
+          .select('id')
+          .eq('team_id', invitation.team_id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+          
+        if (checkError) {
+          console.error('Error checking existing membership:', checkError);
+        }
+        
+        // Only insert if not already a member
+        if (!existingMember) {
+          const { error: memberError } = await supabase
+            .from('team_members')
+            .insert({
+              team_id: invitation.team_id,
+              user_id: user.id,
+              email: user.email || '',
+              role: invitation.role
+            });
 
-        if (memberError) {
-          toast({
-            title: "Error",
-            description: "Could not add you to the team: " + memberError.message,
-            variant: "destructive"
-          });
-          return;
+          if (memberError) {
+            toast({
+              title: "Error",
+              description: "Could not add you to the team: " + memberError.message,
+              variant: "destructive"
+            });
+            return;
+          }
         }
       }
 
@@ -150,7 +263,9 @@ const Team = () => {
         description: "You have joined the team!"
       });
 
+      // Refresh data
       fetchPendingInvitations();
+      fetchTeamMembers();
     } catch (error) {
       console.error('Error accepting invitation:', error);
       toast({
@@ -220,7 +335,7 @@ const Team = () => {
         teamId = newTeam.id;
         
         // Add user as a team member with admin role
-        await supabase
+        const { error: memberError } = await supabase
           .from('team_members')
           .insert({
             team_id: teamId,
@@ -228,6 +343,11 @@ const Team = () => {
             email: user.email || '',
             role: 'admin'
           });
+          
+        if (memberError) {
+          console.error('Error adding user as team member:', memberError);
+          // Continue anyway since the team was created
+        }
       } else {
         teamId = existingTeams[0].id;
       }
@@ -262,6 +382,9 @@ const Team = () => {
       setNewInviteEmail('');
       setNewInviteRole('');
       setNewInviteMessage('');
+      
+      // Refresh pending invites
+      fetchSentInvitations();
     } catch (error) {
       console.error('Error in send invitation flow:', error);
       toast({
@@ -272,19 +395,68 @@ const Team = () => {
     }
   };
 
-  const handleCancelInvite = (id: number) => {
-    setPendingInvites(pendingInvites.filter(invite => invite.id !== id));
-    toast({
-      title: "Invitation cancelled",
-      description: "The invitation has been cancelled successfully.",
-    });
+  const handleCancelInvite = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('team_invitations')
+        .update({ status: 'cancelled' })
+        .eq('id', id);
+        
+      if (error) {
+        console.error('Error cancelling invitation:', error);
+        toast({
+          title: "Error",
+          description: "Could not cancel invitation: " + error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      setPendingInvites(pendingInvites.filter(invite => invite.id !== id));
+      toast({
+        title: "Invitation cancelled",
+        description: "The invitation has been cancelled successfully.",
+      });
+    } catch (error) {
+      console.error('Unexpected error cancelling invitation:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleResendInvite = (id: number) => {
-    toast({
-      title: "Invitation resent",
-      description: "The invitation has been resent successfully.",
-    });
+  const handleResendInvite = async (id: number) => {
+    try {
+      // Just update the timestamp to "resend"
+      const { error } = await supabase
+        .from('team_invitations')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', id);
+        
+      if (error) {
+        console.error('Error resending invitation:', error);
+        toast({
+          title: "Error",
+          description: "Could not resend invitation: " + error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      toast({
+        title: "Invitation resent",
+        description: "The invitation has been resent successfully.",
+      });
+    } catch (error) {
+      console.error('Unexpected error resending invitation:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -658,6 +830,17 @@ const Team = () => {
                   <div className="flex justify-center py-8">
                     <p>Loading invitations...</p>
                   </div>
+                ) : error ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <p className="text-destructive">{error}</p>
+                    <Button 
+                      variant="outline" 
+                      className="mt-4" 
+                      onClick={fetchPendingInvitations}
+                    >
+                      Try Again
+                    </Button>
+                  </div>
                 ) : pendingInvitations.length > 0 ? (
                   <div className="space-y-4">
                     <Table>
@@ -677,7 +860,7 @@ const Team = () => {
                               <Badge variant="outline">{invitation.role}</Badge>
                             </TableCell>
                             <TableCell>
-                              {new Date(invitation.created_at).toLocaleDateString()}
+                              {format(new Date(invitation.created_at), 'PP')}
                             </TableCell>
                             <TableCell>
                               <Button 
